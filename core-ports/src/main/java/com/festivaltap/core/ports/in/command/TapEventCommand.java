@@ -33,8 +33,7 @@ public record TapEventCommand(
         if (occurredAt == null) {
             throw new InvalidTapCommandException("occurredAt must not be null");
         }
-        String normalized = status.toLowerCase();
-        if (!ALLOWED_STATUSES.contains(normalized)) {
+        if (!ALLOWED_STATUSES.contains(status.toLowerCase())) {
             throw new InvalidTapCommandException("status must be 'open' or 'close', got: " + status);
         }
     }
