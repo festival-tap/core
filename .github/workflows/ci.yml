@@ -1,0 +1,72 @@
+# ==============================================================================
+# Workflow: Core Hexagon CI & GitHub Packages Publisher
+# Repository: festival-tap/core
+# ==============================================================================
+#
+# Purpose:
+#   Automates continuous integration and ordered artifact publication for the
+#   two-module Java 24 hexagon core (`core-ports` -> `core-domain`).
+#
+# Build & Release Order:
+#   1. Deploy `core-ports` first (on push to `main`) so downstream consumers
+#      (`festival-tap/persistence`) can resolve updated contracts immediately.
+#   2. Verify `core-domain` against `com.festivaltap:persistence` in test scope.
+#   3. Deploy `core-domain` to GitHub Packages (on push to `main`).
+#
+# Cross-Org Package Note:
+#   `core-domain` test scope transitively resolves `com.sugarcoatlabs:*` via
+#   `com.festivaltap:persistence`. Ensure `sugarcoat-labs` GitHub Packages have
+#   Public visibility (or provide a classic PAT with `read:packages`).
+# ==============================================================================
+
+name: Core Hexagon CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-test:
+    name: Build, Verify & Publish (JDK 24)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 24
+        uses: actions/setup-java@v5
+        with:
+          java-version: '24'
+          distribution: 'temurin'
+          cache: 'maven'
+          server-id: github
+          server-username: ${{ github.actor }}
+          server-password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 1. On pull requests: verify core-ports compiles cleanly without publishing
+      - name: Verify core-ports (PR)
+        if: github.event_name == 'pull_request'
+        run: mvn -B -pl core-ports clean verify
+
+      # 2. On push to main: publish core-ports + parent POM first so persistence can resolve it
+      - name: Publish parent POM and core-ports to GitHub Packages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mvn -B -N deploy
+          mvn -B -pl core-ports clean deploy
+
+      # 3. Compile core-domain and run behavioral tests backed by Persistence.jdk()
+      - name: Verify core-domain
+        run: mvn -B -pl core-domain clean verify
+
+      # 4. Publish core-domain to GitHub Packages on push to main
+      - name: Publish core-domain to GitHub Packages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: mvn -B -pl core-domain deploy -DskipTests
