@@ -5,6 +5,18 @@
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!--
+    SPEC (Source of Truth):
+    - Module: com.festivaltap:core (version 1.0.0-SNAPSHOT, pom aggregator & parent) with child modules core-ports and core-domain.
+    - Runtime/Java target: Requires Java 24 or higher and compiles with Java 24 release target.
+    - What is downloaded (inbound):
+      * From https://maven.pkg.github.com/festival-tap: com.festivaltap:persistence in test scope for core-domain tests.
+      * From https://maven.pkg.github.com/sugarcoat-labs: transitive com.sugarcoatlabs:persistence-engines-* dependencies needed during test execution.
+      * From Maven Central (test scope): org.junit:junit-bom for JUnit 5 test dependencies.
+    - Boundary rule: com.festivaltap:persistence and com.sugarcoatlabs:* must never appear in compile or runtime scope of core modules.
+    - What is distributed (outbound): Publishes com.festivaltap:core and its modules for releases and snapshots to https://maven.pkg.github.com/festival-tap/core.
+    -->
+
     <groupId>com.festivaltap</groupId>
     <artifactId>core</artifactId>
     <version>1.0.0-SNAPSHOT</version>
@@ -39,10 +51,12 @@
 
         <junit.version>5.11.4</junit.version>
         <persistence.version>1.0.0-SNAPSHOT</persistence.version>
-        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
-        <maven-surefire-plugin.version>3.5.2</maven-surefire-plugin.version>
-        <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
-        <maven-deploy-plugin.version>3.1.4</maven-deploy-plugin.version>
+
+        <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
+        <maven-jar-plugin.version>3.5.1</maven-jar-plugin.version>
+        <maven-deploy-plugin.version>3.2.0</maven-deploy-plugin.version>
+        <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -124,9 +138,42 @@
                     <artifactId>maven-deploy-plugin</artifactId>
                     <version>${maven-deploy-plugin.version}</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-enforcer-plugin</artifactId>
+                    <version>${maven-enforcer-plugin.version}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>enforce-spec</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireJavaVersion>
+                                    <version>[24,)</version>
+                                </requireJavaVersion>
+                                <bannedDependencies>
+                                    <searchTransitive>true</searchTransitive>
+                                    <excludes>
+                                        <exclude>com.festivaltap:persistence:*:*:compile</exclude>
+                                        <exclude>com.festivaltap:persistence:*:*:runtime</exclude>
+                                        <exclude>com.sugarcoatlabs:*:*:*:compile</exclude>
+                                        <exclude>com.sugarcoatlabs:*:*:*:runtime</exclude>
+                                    </excludes>
+                                </bannedDependencies>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
