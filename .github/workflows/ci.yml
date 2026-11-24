@@ -8,15 +8,16 @@
 #   two-module Java 24 hexagon core (`core-ports` -> `core-domain`).
 #
 # Build & Release Order:
-#   1. Deploy `core-ports` first (on push to `main`) so downstream consumers
-#      (`festival-tap/persistence`) can resolve updated contracts immediately.
+#   1. Deploy parent POM + `core-ports` first (on push to `main`) so downstream
+#      consumers (`festival-tap/persistence`) can resolve updated contracts.
 #   2. Verify `core-domain` against `com.festivaltap:persistence` in test scope.
 #   3. Deploy `core-domain` to GitHub Packages (on push to `main`).
 #
-# Cross-Org Package Note:
-#   `core-domain` test scope transitively resolves `com.sugarcoatlabs:*` via
-#   `com.festivaltap:persistence`. Ensure `sugarcoat-labs` GitHub Packages have
-#   Public visibility (or provide a classic PAT with `read:packages`).
+# Authentication Note:
+#   - Uses `GH_PACKAGES_TOKEN` (Classic PAT with `write:packages` & `read:packages`)
+#     if configured in org/repo secrets, falling back to `GITHUB_TOKEN`.
+#   - Ensure `festival-tap` org Settings -> Actions -> General -> Workflow
+#     permissions is set to "Read and write permissions".
 # ==============================================================================
 
 name: Core Hexagon CI
@@ -30,6 +31,9 @@ on:
 permissions:
   contents: read
   packages: write
+
+env:
+  MAVEN_SETTINGS: ${{ runner.temp }}/settings.xml
 
 jobs:
   build-and-test:
@@ -46,50 +50,46 @@ jobs:
           java-version: '24'
           distribution: 'temurin'
           cache: 'maven'
-          server-id: github-festival-tap
-          server-username: ${{ github.actor }}
-          server-password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Maven servers for GitHub Packages
+      - name: Configure Maven settings for GitHub Packages
         run: |
-          mkdir -p ~/.m2
-          cat << 'EOF' > ~/.m2/settings.xml
+          cat << EOF > "${MAVEN_SETTINGS}"
           <settings>
             <servers>
               <server>
                 <id>github-festival-tap</id>
-                <username>${env.GITHUB_ACTOR}</username>
-                <password>${env.GITHUB_TOKEN}</password>
+                <username>${GITHUB_ACTOR}</username>
+                <password>${PACKAGES_TOKEN}</password>
               </server>
               <server>
                 <id>github-sugarcoat</id>
-                <username>${env.GITHUB_ACTOR}</username>
-                <password>${env.GITHUB_TOKEN}</password>
+                <username>${GITHUB_ACTOR}</username>
+                <password>${PACKAGES_TOKEN}</password>
               </server>
             </servers>
           </settings>
           EOF
         env:
           GITHUB_ACTOR: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PACKAGES_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN || secrets.GITHUB_TOKEN }}
 
       # 1. On pull requests: verify core-ports compiles cleanly without publishing
       - name: Verify core-ports (PR)
         if: github.event_name == 'pull_request'
-        run: mvn -B -pl core-ports clean verify
+        run: mvn -B -s "${MAVEN_SETTINGS}" -pl core-ports clean verify
 
-      # 2. On push to main: publish core-ports + parent POM first so persistence can resolve it
+      # 2. On push to main: publish parent POM and core-ports first so persistence can resolve it
       - name: Publish parent POM and core-ports to GitHub Packages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          mvn -B -N deploy
-          mvn -B -pl core-ports clean deploy
+          mvn -B -s "${MAVEN_SETTINGS}" -N deploy
+          mvn -B -s "${MAVEN_SETTINGS}" -pl core-ports clean deploy
 
       # 3. Compile core-domain and run behavioral tests backed by Persistence.jdk()
       - name: Verify core-domain
-        run: mvn -B -pl core-domain clean verify
+        run: mvn -B -s "${MAVEN_SETTINGS}" -pl core-domain clean verify
 
       # 4. Publish core-domain to GitHub Packages on push to main
       - name: Publish core-domain to GitHub Packages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: mvn -B -pl core-domain deploy -DskipTests
+        run: mvn -B -s "${MAVEN_SETTINGS}" -pl core-domain deploy -DskipTests
