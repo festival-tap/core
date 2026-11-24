@@ -39,6 +39,7 @@ permissions:
 
 env:
   MAVEN_SETTINGS: /tmp/settings.xml
+  MAVEN_OPTS: "-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true"
 
 jobs:
   build-and-test:
@@ -92,6 +93,7 @@ jobs:
 
       # 3. Compile core-domain and run behavioral tests backed by Persistence.jdk()
       - name: Verify core-domain
+        if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
         run: mvn -B -s "${MAVEN_SETTINGS}" -pl core-domain clean verify
 
       # 4. Publish core-domain to GitHub Packages on push to main
