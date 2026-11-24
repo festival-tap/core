@@ -1,23 +1,28 @@
 # ==============================================================================
-# Workflow: Core Hexagon CI & GitHub Packages Publisher
-# Repository: festival-tap/core
-# ==============================================================================
-#
-# Purpose:
-#   Automates continuous integration and ordered artifact publication for the
-#   two-module Java 24 hexagon core (`core-ports` -> `core-domain`).
-#
-# Build & Release Order:
-#   1. Deploy parent POM + `core-ports` first (on push to `main`) so downstream
-#      consumers (`festival-tap/persistence`) can resolve updated contracts.
-#   2. Verify `core-domain` against `com.festivaltap:persistence` in test scope.
-#   3. Deploy `core-domain` to GitHub Packages (on push to `main`).
-#
-# Authentication Note:
-#   - Uses `GH_PACKAGES_TOKEN` (Classic PAT with `write:packages` & `read:packages`)
-#     if configured in org/repo secrets, falling back to `GITHUB_TOKEN`.
-#   - Ensure `festival-tap` org Settings -> Actions -> General -> Workflow
-#     permissions is set to "Read and write permissions".
+# SPEC (Source of Truth):
+# - Workflow: Core Hexagon CI & GitHub Packages Publisher (`festival-tap/core`).
+# - Triggers: Runs on every push or pull request targeting `main`.
+# - Runtime & Build: Uses `ubuntu-latest` with Eclipse Temurin JDK 24 and Maven
+#   dependency caching (`actions/setup-java@v5`).
+# - Credentials & Repositories: Generates `${MAVEN_SETTINGS}` (`/tmp/settings.xml`)
+#   with `<server>` entries for `github-festival-tap` and `github-sugarcoat-labs`
+#   using `${GITHUB_ACTOR}` and `${PACKAGES_TOKEN}` (`secrets.GH_PACKAGES_TOKEN`
+#   falling back to `secrets.GITHUB_TOKEN`), resolving `com.sugarcoatlabs`
+#   `1.0.0` persistence artifacts and `com.festivaltap:persistence`.
+# - Pull Requests: Runs `mvn -B -s "${MAVEN_SETTINGS}" -pl core-ports clean verify`
+#   without publishing.
+# - Pushes to `main`:
+#     1. Deploys the parent POM (`mvn -B -s "${MAVEN_SETTINGS}" -N deploy`) and
+#        `core-ports` (`mvn -B -s "${MAVEN_SETTINGS}" -pl core-ports clean deploy`)
+#        first so downstream consumers (`festival-tap/persistence`) can resolve
+#        updated contracts.
+#     2. Verifies `core-domain` (`mvn -B -s "${MAVEN_SETTINGS}" -pl core-domain clean verify`)
+#        against `com.festivaltap:persistence` in test scope.
+#     3. Deploys `core-domain` (`mvn -B -s "${MAVEN_SETTINGS}" -pl core-domain deploy -DskipTests`)
+#        to GitHub Packages (`https://maven.pkg.github.com/festival-tap/core`).
+# - Permissions: Requires `contents: read` and `packages: write`, plus
+#   `Read and write permissions` under `festival-tap` org Settings -> Actions ->
+#   General -> Workflow permissions when using `GITHUB_TOKEN`.
 # ==============================================================================
 
 name: Core Hexagon CI
@@ -62,7 +67,7 @@ jobs:
                 <password>${PACKAGES_TOKEN}</password>
               </server>
               <server>
-                <id>github-sugarcoat</id>
+                <id>github-sugarcoat-labs</id>
                 <username>${GITHUB_ACTOR}</username>
                 <password>${PACKAGES_TOKEN}</password>
               </server>

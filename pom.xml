@@ -11,7 +11,7 @@
     - Runtime/Java target: Requires Java 24 or higher and compiles with Java 24 release target.
     - What is downloaded (inbound):
       * From https://maven.pkg.github.com/festival-tap: com.festivaltap:persistence in test scope for core-domain tests.
-      * From https://maven.pkg.github.com/sugarcoat-labs: transitive com.sugarcoatlabs:persistence-engines-* dependencies needed during test execution.
+      * From https://maven.pkg.github.com/sugarcoat-labs: transitive com.sugarcoatlabs:persistence-engines-* (1.0.0) dependencies needed during test execution.
       * From Maven Central (test scope): org.junit:junit-bom for JUnit 5 test dependencies.
     - Boundary rule: com.festivaltap:persistence and com.sugarcoatlabs:* must never appear in compile or runtime scope of core modules.
     - What is distributed (outbound): Publishes com.festivaltap:core and its modules for releases and snapshots to https://maven.pkg.github.com/festival-tap/core.
@@ -51,6 +51,7 @@
 
         <junit.version>5.11.4</junit.version>
         <persistence.version>1.0.0-SNAPSHOT</persistence.version>
+        <sugarcoat.persistence.version>1.0.0</sugarcoat.persistence.version>
 
         <maven-compiler-plugin.version>3.16.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
@@ -73,6 +74,20 @@
                 <groupId>com.festivaltap</groupId>
                 <artifactId>persistence</artifactId>
                 <version>${persistence.version}</version>
+                <scope>test</scope>
+            </dependency>
+
+            <!-- Published sugarcoat-labs persistence engines (test scope via persistence adapter) -->
+            <dependency>
+                <groupId>com.sugarcoatlabs</groupId>
+                <artifactId>persistence-engines-core</artifactId>
+                <version>${sugarcoat.persistence.version}</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.sugarcoatlabs</groupId>
+                <artifactId>persistence-engines-dynamodb</artifactId>
+                <version>${sugarcoat.persistence.version}</version>
                 <scope>test</scope>
             </dependency>
 
