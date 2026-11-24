@@ -7,19 +7,19 @@
 
     <!--
     SPEC (Source of Truth):
-    - Module: com.festivaltap:core (version 1.0.0, pom aggregator & parent) with child modules core-ports and core-domain.
+    - Module: com.festivaltap:core (version 1.0.1, pom aggregator & parent) with child modules core-ports and core-domain.
     - Runtime/Java target: Requires Java 24 or higher and compiles with Java 24 release target.
     - What is downloaded (inbound):
       * From https://maven.pkg.github.com/festival-tap: com.festivaltap:persistence (1.0.0) in test scope for core-domain tests.
       * From https://maven.pkg.github.com/sugarcoat-labs: transitive com.sugarcoatlabs:persistence-engines-* (1.0.0) dependencies needed during test execution.
       * From Maven Central (test scope): org.junit:junit-bom for JUnit 5 test dependencies.
     - Boundary rule: com.festivaltap:persistence and com.sugarcoatlabs:* must never appear in compile or runtime scope of core modules.
-    - What is distributed (outbound): Publishes com.festivaltap:core (1.0.0) and its modules to https://maven.pkg.github.com/festival-tap/core.
+    - What is distributed (outbound): Publishes com.festivaltap:core (1.0.1) and its modules to https://maven.pkg.github.com/festival-tap/core.
     -->
 
     <groupId>com.festivaltap</groupId>
     <artifactId>core</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>pom</packaging>
 
     <name>Festival Tap - Core</name>
