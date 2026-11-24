@@ -33,7 +33,7 @@ permissions:
   packages: write
 
 env:
-  MAVEN_SETTINGS: ${{ runner.temp }}/settings.xml
+  MAVEN_SETTINGS: /tmp/settings.xml
 
 jobs:
   build-and-test:
